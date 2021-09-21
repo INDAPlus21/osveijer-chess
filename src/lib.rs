@@ -44,6 +44,16 @@ impl Piece {
         }
     }
 
+    fn dis(&self) -> String {
+        match self {
+            Piece::King(_) => "K  ".to_owned(),
+            Piece::Queen(_) => "Q  ".to_owned(),
+            Piece::Bishop(_) => "B  ".to_owned(),
+            Piece::Knight(_) => "Kn ".to_owned(),
+            Piece::Rook(_) => "R  ".to_owned(),
+            Piece::Pawn(_) => "P  ".to_owned()
+        }
+    }
 }
 
 pub struct Game {
@@ -65,7 +75,7 @@ fn decode_position(_position: &str) -> Option<Vec<usize>> {
 fn code_moves(_moves: Vec<Vec<usize>>) -> Vec<String> {
     let mut moves: Vec<String> = Vec::default();
     for i in _moves {
-        moves.push(FILES[i[0]].to_string() + &i[1].to_string());
+        moves.push(FILES[i[0]].to_string() + &(i[1]+1).to_string());
     }
     moves
 }
@@ -94,7 +104,7 @@ fn get_availble_moves(_piece: Piece, _position: Vec<usize>, _game: &Game, _check
 
     // if in check, remove moves that do not resolve check
     if _game.state == GameState::Check {
-        remove_check(&_position, _game, &mut moves);
+        resolve_check(&_position, _game, &mut moves);
     }
 
     moves
@@ -114,19 +124,12 @@ fn get_king_movement(_position: &Vec<usize>, _game: &Game, _checkable: bool) -> 
         (-1,1)
     ];
 
-    // generate moves
+    // generate legal moves
     for i in offsets {
-        moves.push(vec![_position[0] as isize + i.0, _position[1] as isize + i.1]);
-    }
-    // check if move is out of bounds, occupied or in check and remove such moves
-    let mut remove: Vec<Vec<isize>> = Vec::default();
-    for i in &moves {
-        if i[0] < 0 || i[0] > 7 || i[1] < 0 || i[1] > 7 || check_occupied(&i, _game) || check_check(&i, _game) {
-            remove.push(i.to_owned());
+        let mv = vec![_position[0] as isize + i.0, _position[1] as isize + i.1];
+        if mv[0] < 0 || mv[0] > 7 || mv[1] < 0 || mv[1] > 7 || check_occupied(&mv, _game) || check_check(&mv, _game) {
+            moves.push(mv.to_owned());
         }
-    }
-    for i in remove {
-        moves.remove(moves.iter().position(|x| *x == i).unwrap());
     }
 
     // convert isize to usize
@@ -151,20 +154,12 @@ fn get_knight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
         (-2,1)
     ];
 
-    // generate moves
+    // generate legal moves
     for i in offsets {
-        moves.push(vec![_position[0] as isize + i.0, _position[1] as isize + i.1])
-    }
-
-    // check if move is out of bounds or occupied and remove such moves
-    let mut remove: Vec<Vec<isize>> = Vec::default();
-    for i in &moves {
-        if i[0] < 0 || i[0] > 7 || i[1] < 0 || i[1] > 7 || check_occupied(&i, _game) {
-            remove.push(i.to_owned());
+        let mv = vec![_position[0] as isize + i.0, _position[1] as isize + i.1];
+        if mv[0] < 0 || mv[0] > 7 || mv[1] < 0 || mv[1] > 7 || check_occupied(&mv, _game) {
+            moves.push(mv.to_owned());
         }
-    }
-    for i in remove {
-        moves.remove(moves.iter().position(|x| *x == i).unwrap());
     }
 
     // convert isize to usize
@@ -177,9 +172,81 @@ fn get_knight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
 }
 
 fn get_pawn_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
-    let mut moves: Vec<Vec<usize>> = Vec::default();
+    let piece = _game.board[_position[0]][_position[1]].unwrap();
+    // check colour to get direction of movement
+    match piece.unwrap() {
+        Colour::White => {
+            let mut mvs: Vec<Vec<usize>> = Vec::default();
+            // check if double move is possible
+            let offset: Vec<Vec<isize>> = match _position[0] {
+                1 => vec![vec![1,0],vec![2,0]],
+                _ => vec![vec![1,0]]
+            };
+            // check if blocked
+            for mv in offset {
+                let m = vec![(_position[0] as isize + mv[0]) as usize, (_position[1] as isize + mv[1]) as usize];
+                match _game.board[m[0]][m[1]] {
+                    Some(_) => break,
+                    None => mvs.push(m)
+                }
+            }
+            // check if on side, meaning that moving to that side is not possible
+            let takes: Vec<Vec<isize>> = match _position[1] {
+                0 => vec![vec![1,1]],
+                7 => vec![vec![1,-1]],
+                _ => vec![vec![1,1],vec![1,-1]]
+            };
+            // check if there is a piece to take
+            for mv in takes {
+                let m = vec![(_position[0] as isize + mv[0]) as usize, (_position[1] as isize + mv[1]) as usize];
+                match _game.board[m[0]][m[1]] {
+                    Some(x) => match x.unwrap() {
+                        Colour::Black => mvs.push(m),
+                        _ => continue
+                    },
+                    None => continue
+                }
+            }
 
-    moves
+            mvs
+        },
+        Colour::Black => {
+            let mut mvs: Vec<Vec<usize>> = Vec::default();
+            // check if double move is possible
+            let offset: Vec<Vec<isize>> = match _position[0] {
+                6 => vec![vec![-1,0],vec![-2,0]],
+                _ => vec![vec![-1,0]]
+            };
+            // check if blocked
+            for mv in offset {
+                let m = vec![(_position[0] as isize + mv[0]) as usize, (_position[1] as isize + mv[1]) as usize];
+                match _game.board[m[0]][m[1]] {
+                    Some(_) => break,
+                    None => mvs.push(m)
+                }
+            }
+            // check if on side, meaning that moving to that side is not possible
+            let takes: Vec<Vec<isize>> = match _position[1] {
+                0 => vec![vec![-1,1]],
+                7 => vec![vec![-1,-1]],
+                _ => vec![vec![-1,1],vec![-1,-1]]
+            };
+            // check if there is a piece to take
+            for mv in takes {
+                let m = vec![(_position[0] as isize + mv[0]) as usize, (_position[1] as isize + mv[1]) as usize];
+                match _game.board[m[0]][m[1]] {
+                    Some(x) => match x.unwrap() {
+                        Colour::White => mvs.push(m),
+                        _ => continue
+                    },
+                    None => continue
+                }
+            }
+
+            mvs
+        }
+
+    }
 }
 
 fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
@@ -336,10 +403,10 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
 }
 
 fn check_occupied(_position: &Vec<isize>, _game: &Game) -> bool {
-    if _game.board[_position[0] as usize][_position[1] as usize].unwrap().unwrap() == &_game.active {
-        return true
+    match _game.board[_position[0] as usize][_position[1] as usize] {
+        Some(piece) => piece.unwrap() == &_game.active,
+        None => false
     }
-    false
 }
 
 fn check_check(_postion: &Vec<isize>, _game: &Game) -> bool {
@@ -366,7 +433,7 @@ fn check_pinned(_position: &Vec<usize>, _game: &Game, _moves: &mut Vec<Vec<usize
 
 }
 
-fn remove_check(_position: &Vec<usize>, _game: &Game, _moves: &mut Vec<Vec<usize>>) {
+fn resolve_check(_position: &Vec<usize>, _game: &Game, _moves: &mut Vec<Vec<usize>>) {
 
 }
 
@@ -410,14 +477,18 @@ impl Game {
     /// (optional) Don't forget to include en passent and castling.
     pub fn get_possible_moves(&self, _position: String) -> Option<Vec<String>> {
         let position = decode_position(&_position).unwrap();
-        let piece = self.board[position[0]][position[1]].unwrap();
-        if piece.unwrap() != &self.active {
-            return None
+        match self.board[position[0]][position[1]] {
+            Some(piece) => {
+                if piece.unwrap() != &self.active {
+                    return None
+                }
+                let moves = get_availble_moves(piece, position, &self, true);
+        
+                let c_moves = code_moves(moves);
+                Some(c_moves)
+            }
+            None => None
         }
-        let moves = get_availble_moves(piece, position, &self, true);
-
-        let c_moves = code_moves(moves);
-        Some(c_moves)
     }
 }
 
@@ -437,8 +508,21 @@ impl Game {
 impl fmt::Debug for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         /* build board representation string */
-        
-        write!(f, "")
+        let mut board: String = "|:------------------------:|".to_owned();
+        for i in self.board {
+            board += "\n|  ";
+            for j in i {
+                let piece: String = match j {
+                    Some(p) => p.dis(),
+                    None => "*  ".to_owned()
+                };
+                board += &piece;
+            }
+            board += "|";
+        }
+        board += "\n|:------------------------:|";
+
+        write!(f, "{}", board)
     }
 }
 
