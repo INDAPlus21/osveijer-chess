@@ -80,38 +80,43 @@ fn code_moves(_moves: Vec<Vec<usize>>) -> Vec<String> {
     moves
 }
 
-fn get_availble_moves(_piece: Piece, _position: Vec<usize>, _game: &Game, _checkable: bool) -> Vec<Vec<usize>> {
+fn get_availble_moves(_piece: Piece, _position: &Vec<usize>, _game: &Game, _checkable: bool) -> Vec<Vec<usize>> {
     // get all moves
     let mut moves: Vec<Vec<usize>> = match _piece {
-        Piece::King(_) => get_king_movement(&_position, _game, _checkable),
-        Piece::Queen(_) => {
-            let mut moves = get_straight_moves(&_position, _game);
-            moves.append(&mut get_diagonal_moves(&_position,_game));
+        Piece::King(c) => get_king_movement(&_position, _game, _checkable, c),
+        Piece::Queen(c) => {
+            let mut moves = get_straight_moves(&_position, _game, c);
+            moves.append(&mut get_diagonal_moves(&_position,_game, c));
             moves
         },
-        Piece::Bishop(_) => get_diagonal_moves(&_position, _game),
-        Piece::Knight(_) => get_knight_moves(&_position,_game),
-        Piece::Rook(_) => get_straight_moves(&_position, _game),
+        Piece::Bishop(c) => get_diagonal_moves(&_position, _game, c),
+        Piece::Knight(c) => get_knight_moves(&_position,_game, c),
+        Piece::Rook(c) => get_straight_moves(&_position, _game, c),
         Piece::Pawn(_) => get_pawn_moves(&_position,_game)
     };
 
     // remove illegal moves
-    // if pinned, remove moves that reveal king
-    match _piece {
-        Piece::King(_) => (),
-        _ => check_pinned(&_position, _game, &mut moves)
-    }
+    if _checkable {
+        // if pinned, remove moves that reveal king
+        moves = match _piece {
+            Piece::King(_) => moves,
+            _ => check_pinned(&_position, _game, &moves, _game.active)
+        };
 
-    // if in check, remove moves that do not resolve check
-    if _game.state == GameState::Check {
-        resolve_check(&_position, _game, &mut moves);
+        // if in check, remove moves that do not resolve check
+        if _game.state == GameState::Check {
+            moves = match _piece {
+                Piece::King(_) => moves,
+                _ => resolve_check(&_position, _game, &moves, _game.active)
+            };
+        }
     }
 
     moves
 }
 
 
-fn get_king_movement(_position: &Vec<usize>, _game: &Game, _checkable: bool) -> Vec<Vec<usize>> {
+fn get_king_movement(_position: &Vec<usize>, _game: &Game, _checkable: bool, _colour: Colour) -> Vec<Vec<usize>> {
     let mut moves: Vec<Vec<isize>> = Vec::default();
     let offsets: Vec<(isize,isize)> = vec![
         (0,1),
@@ -127,7 +132,7 @@ fn get_king_movement(_position: &Vec<usize>, _game: &Game, _checkable: bool) -> 
     // generate legal moves
     for i in offsets {
         let mv = vec![_position[0] as isize + i.0, _position[1] as isize + i.1];
-        if mv[0] < 0 || mv[0] > 7 || mv[1] < 0 || mv[1] > 7 || check_occupied(&mv, _game) || check_check(&mv, _game) {
+        if mv[0] >= 0 && mv[0] <= 7 && mv[1] >= 0 && mv[1] <= 7 && !check_occupied(&mv, _game, _colour) && (!check_check(&mv, _game, _colour) || !_checkable) {
             moves.push(mv.to_owned());
         }
     }
@@ -141,7 +146,7 @@ fn get_king_movement(_position: &Vec<usize>, _game: &Game, _checkable: bool) -> 
     umoves
 }
 
-fn get_knight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
+fn get_knight_moves(_position: &Vec<usize>, _game: &Game, _colour: Colour) -> Vec<Vec<usize>> {
     let mut moves: Vec<Vec<isize>> = Vec::default();
     let offsets: Vec<(isize,isize)> = vec![
         (1,2),
@@ -157,7 +162,7 @@ fn get_knight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     // generate legal moves
     for i in offsets {
         let mv = vec![_position[0] as isize + i.0, _position[1] as isize + i.1];
-        if mv[0] < 0 || mv[0] > 7 || mv[1] < 0 || mv[1] > 7 || check_occupied(&mv, _game) {
+        if mv[0] >= 0 && mv[0] <= 7 && mv[1] >= 0 && mv[1] <= 7 && !check_occupied(&mv, _game, _colour) {
             moves.push(mv.to_owned());
         }
     }
@@ -190,7 +195,7 @@ fn get_pawn_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
                     None => mvs.push(m)
                 }
             }
-            // check if on side, meaning that moving to that side is not possible
+            // check if on edge, meaning that moving towards that edge is not possible
             let takes: Vec<Vec<isize>> = match _position[1] {
                 0 => vec![vec![1,1]],
                 7 => vec![vec![1,-1]],
@@ -249,13 +254,13 @@ fn get_pawn_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     }
 }
 
-fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
+fn get_straight_moves(_position: &Vec<usize>, _game: &Game, _colour: Colour) -> Vec<Vec<usize>> {
     let mut moves: Vec<Vec<usize>> = Vec::default();
 
     // down
     for i in _position[0]+1..8 {
         match _game.board[i][_position[1]]{
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![i, _position[1]]);
@@ -269,7 +274,7 @@ fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     // up
     for i in (_position[1]-1..=0).rev() {
         match _game.board[i][_position[1]]{
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![i, _position[1]]);
@@ -283,7 +288,7 @@ fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     // down
     for i in _position[0]+1..8 {
         match _game.board[i][_position[1]]{
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![i, _position[1]]);
@@ -297,7 +302,7 @@ fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     // right
     for i in _position[1]+1..8 {
         match _game.board[_position[0]][i]{
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![i, _position[1]]);
@@ -311,7 +316,7 @@ fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     // left
     for i in (_position[1]-1..=0).rev() {
         match _game.board[_position[0]][i]{
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![i, _position[1]]);
@@ -325,7 +330,7 @@ fn get_straight_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     moves
 }
 
-fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
+fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game, _colour: Colour) -> Vec<Vec<usize>> {
     let mut moves: Vec<Vec<usize>> = Vec::default();
     let mut pos: Vec<isize> = vec![_position[0] as isize,_position[1] as isize];
     
@@ -334,7 +339,7 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
         pos[0] += 1;
         pos[1] += 1;
         match _game.board[pos[0] as usize][pos[1] as usize] {
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![pos[0] as usize, pos[1] as usize]);
@@ -352,7 +357,7 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
         pos[0] += 1;
         pos[1] -= 1;
         match _game.board[pos[0] as usize][pos[1] as usize] {
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![pos[0] as usize, pos[1] as usize]);
@@ -370,7 +375,7 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
         pos[0] -= 1;
         pos[1] += 1;
         match _game.board[pos[0] as usize][pos[1] as usize] {
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![pos[0] as usize, pos[1] as usize]);
@@ -388,7 +393,7 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
         pos[0] -= 1;
         pos[1] -= 1;
         match _game.board[pos[0] as usize][pos[1] as usize] {
-            Some(x) => {match x.unwrap() == &_game.active {
+            Some(x) => {match x.unwrap() == &_colour {
                 true => break,
                 false => {
                     moves.push(vec![pos[0] as usize, pos[1] as usize]);
@@ -402,40 +407,209 @@ fn get_diagonal_moves(_position: &Vec<usize>, _game: &Game) -> Vec<Vec<usize>> {
     moves
 }
 
-fn check_occupied(_position: &Vec<isize>, _game: &Game) -> bool {
+fn check_occupied(_position: &Vec<isize>, _game: &Game, _colour: Colour) -> bool {
     match _game.board[_position[0] as usize][_position[1] as usize] {
-        Some(piece) => piece.unwrap() == &_game.active,
+        Some(piece) => piece.unwrap() == &_colour,
         None => false
     }
 }
 
-fn check_check(_postion: &Vec<isize>, _game: &Game) -> bool {
+fn check_check(_postion: &Vec<isize>, _game: &Game, _colour: Colour) -> bool {
+    let mut in_check = false;
     for i in _game.board {
         for j in i {
             match j {
-                Some(x) => {match x.unwrap() != &_game.active {
+                Some(x) => {match x.unwrap() != &_colour {
                         true => {
                             let file = _game.board.iter().position(|x| *x == i).unwrap();
                             let rank = _game.board[file].iter().position(|x| *x == j).unwrap(); 
-                            return get_availble_moves(x, vec![file, rank], _game, false).iter().any(|x| x == &vec![_postion[0] as usize, _postion[1] as usize])
+                            in_check = get_availble_moves(x, vec![file, rank], _game, false).iter().any(|x| x == &vec![_postion[0] as usize, _postion[1] as usize])
                         },
-                        _ => return false
+                        _ => continue
                     }
                 },
-                None => return false
+                None => continue
+            };
+        }
+    }
+    in_check
+}
+
+fn check_pinned(_position: &Vec<usize>, _game: &Game, _moves: &Vec<Vec<usize>>, _colour: Colour) -> Vec<Vec<usize>> {
+    // get position of king
+    let mut king_position: Vec<usize> = Vec::default();
+    for i in _game.board {
+        for j in i {
+            match j {
+                Some(p) => {
+                    match p {
+                        Piece::King(c) => if c == _colour { king_position = vec![_game.board.iter().position(|x| *x == i).unwrap(), i.iter().position(|x| *x == j).unwrap()] },
+                        _ => continue
+                    }
+                },
+                None => continue
             }
         }
     }
-    false
+
+    // get the squares a possible pinning piece can be blocked from
+    // worth noting is that the only pieces that can pin is the Queen, Bishops and Rooks
+    let mut pin_line: Vec<Vec<usize>> = Vec::default();
+    let mut pinned: bool = false;
+    for i in _game.board {
+        for j in i {
+            match j {
+                Some(p) => {
+                    let file = _game.board.iter().position(|x| *x == i).unwrap();
+                    let rank = i.iter().position(|x| *x == j).unwrap();
+                    let positon = vec![file,rank];
+                    match p {
+                        Piece::Queen(c) => {if c != _colour {
+                            match get_diagonal_pin(&positon,_position,&king_position,_game) {
+                                Some(x) => {
+                                    pin_line = x;
+                                    pinned = true;
+                                    break
+                                },
+                                None => ()
+                            }
+                            match get_straight_pin(&positon,_position,&king_position,_game) {
+                                Some(x) => {
+                                    pin_line = x;
+                                    pinned = true;
+                                    break
+                                },
+                                None => ()
+                            }
+                        }},
+                        Piece::Bishop(c) => {if c != _colour {
+                            match get_diagonal_pin(&positon,_position,&king_position,_game) {
+                                Some(x) => {
+                                    pin_line = x;
+                                    pinned = true;
+                                    break
+                                },
+                                None => ()
+                            }
+                        }},
+                        Piece::Rook(c) => {if c != _colour {
+                            match get_straight_pin(&positon,_position,&king_position,_game) {
+                                Some(x) => {
+                                    pin_line = x;
+                                    pinned = true;
+                                    break
+                                },
+                                None => ()
+                            }
+                        }},
+                        _ => continue
+                    }
+                },
+                None => continue
+            }
+        }
+        if pinned { break }
+    }
+    
+    // if a pin is found, create new vector of all moves that don't reveal the king
+    if pinned {
+        let mut nmv: Vec<Vec<usize>> = Vec::default();
+        for i in &pin_line {
+            if _moves.iter().any(|x| x == i) {
+                nmv.push(i.to_owned());
+            }
+        }
+        nmv
+    } else {
+        _moves.to_owned()
+    }
 }
 
-fn check_pinned(_position: &Vec<usize>, _game: &Game, _moves: &mut Vec<Vec<usize>>) {
+fn get_diagonal_pin(_position: &Vec<usize>, _pinned: &Vec<usize>, _king: &Vec<usize>, _game: &Game) -> Option<Vec<Vec<usize>>> {
+    None
+}
+
+fn get_straight_pin(_position: &Vec<usize>, _pinned: &Vec<usize>, _king: &Vec<usize>, _game: &Game) -> Option<Vec<Vec<usize>>> {
+    None
+}
+
+fn resolve_check(_position: &Vec<usize>, _game: &Game, _moves: &Vec<Vec<usize>>, _colour: Colour) -> Vec<Vec<usize>> {
+    // get position of king
+    let mut king_position: Vec<usize> = Vec::default();
+    for i in _game.board {
+        for j in i {
+            match j {
+                Some(p) => {
+                    match p {
+                        Piece::King(c) => if c == _colour { king_position = vec![_game.board.iter().position(|x| *x == i).unwrap(), i.iter().position(|x| *x == j).unwrap()] },
+                        _ => continue
+                    }
+                },
+                None => continue
+            }
+        }
+    }
+
+    let mut checking: Vec<Vec<usize>> = Vec::default();
+    for i in _game.board {
+        for j in i {
+            match j {
+                Some(p) => {
+                    if p.unwrap() != &_colour {
+                        let file = _game.board.iter().position(|x| *x == i).unwrap();
+                        let rank = i.iter().position(|x| *x == j).unwrap();
+                        let positon = vec![file,rank];
+
+                        if get_availble_moves(p, &positon, _game, false).iter().any(|x| *x == king_position) {
+                            checking.push(positon);
+                        }
+                    }
+                },
+                None => continue
+            }
+        }
+    }
+
+    // when there are multiple pices checking there is no way to resolve all checks in a single move exept moving the king
+    if checking.len() > 1 {
+        vec![vec![]]
+    } else {
+
+        let check_resolve = match _game.board[checking[0][0]][checking[0][1]].unwrap() {
+            Piece::Queen(c) => {
+                match match get_diagonal_check(&checking[0], &king_position, _game, c) {
+                    Some(x) => Some(x),
+                    None => None
+                } {
+                    Some(x) => x,
+                    None => get_straight_check(&checking[0], &king_position, _game, c).unwrap()
+                }
+            },
+            Piece::Bishop(c) => get_diagonal_check(&checking[0], &king_position, _game, c).unwrap(),
+            Piece::Rook(c) => get_straight_check(&checking[0], &king_position, _game, c).unwrap(),
+            _ => vec![checking[0]]
+        };
+        let mut nmv: Vec<Vec<usize>> = Vec::default();
+        
+        for i in _moves {
+            if check_resolve.iter().any(|x| x == i) {
+                nmv.push(i.to_owned());
+            }
+        }
+
+        nmv
+    }
 
 }
 
-fn resolve_check(_position: &Vec<usize>, _game: &Game, _moves: &mut Vec<Vec<usize>>) {
-
+fn get_diagonal_check(_position: &Vec<usize>, _king: &Vec<usize>, _game: &Game, _colour: Colour) -> Option<Vec<Vec<usize>>> {
+    None
 }
+
+fn get_straight_check(_position: &Vec<usize>, _king: &Vec<usize>, _game: &Game, _colour: Colour) -> Option<Vec<Vec<usize>>> {
+    None
+}
+
 
 impl Game {
     /// Initialises a new board with pieces.
@@ -482,7 +656,7 @@ impl Game {
                 if piece.unwrap() != &self.active {
                     return None
                 }
-                let moves = get_availble_moves(piece, position, &self, true);
+                let moves = get_availble_moves(piece, &position, &self, true);
         
                 let c_moves = code_moves(moves);
                 Some(c_moves)
