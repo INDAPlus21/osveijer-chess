@@ -60,6 +60,7 @@ impl Piece {
     }
 }
 
+#[derive(Copy,Clone)]
 pub struct Game {
     /* save board, active colour, ... */
     state: GameState,
