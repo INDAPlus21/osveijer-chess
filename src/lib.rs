@@ -63,8 +63,8 @@ impl Piece {
 pub struct Game {
     /* save board, active colour, ... */
     state: GameState,
-    active: Colour,
-    board: Vec<Vec<Option<Piece>>>,
+    pub active: Colour,
+    pub board: [[Option<Piece>;8];8],
     white_promotion: Piece,
     black_promotion: Piece
 }
@@ -887,14 +887,14 @@ impl Game {
             /* initialise board, set active colour to white, ... */
             state: GameState::InProgress,
             active: Colour::White,
-            board: vec![vec![Some(Piece::Rook(Colour::White)),Some(Piece::Knight(Colour::White)),Some(Piece::Bishop(Colour::White)),Some(Piece::Queen(Colour::White)),Some(Piece::King(Colour::White)),Some(Piece::Bishop(Colour::White)),Some(Piece::Knight(Colour::White)),Some(Piece::Rook(Colour::White))],
-                    vec![Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White))],
-                    vec![None,None,None,None,None,None,None,None],
-                    vec![None,None,None,None,None,None,None,None],
-                    vec![None,None,None,None,None,None,None,None],
-                    vec![None,None,None,None,None,None,None,None],
-                    vec![Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black))],
-                    vec![Some(Piece::Rook(Colour::Black)),Some(Piece::Knight(Colour::Black)),Some(Piece::Bishop(Colour::Black)),Some(Piece::Queen(Colour::Black)),Some(Piece::King(Colour::Black)),Some(Piece::Bishop(Colour::Black)),Some(Piece::Knight(Colour::Black)),Some(Piece::Rook(Colour::Black))]],
+            board: [[Some(Piece::Rook(Colour::White)),Some(Piece::Knight(Colour::White)),Some(Piece::Bishop(Colour::White)),Some(Piece::Queen(Colour::White)),Some(Piece::King(Colour::White)),Some(Piece::Bishop(Colour::White)),Some(Piece::Knight(Colour::White)),Some(Piece::Rook(Colour::White))],
+                    [Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White))],
+                    [None,None,None,None,None,None,None,None],
+                    [None,None,None,None,None,None,None,None],
+                    [None,None,None,None,None,None,None,None],
+                    [None,None,None,None,None,None,None,None],
+                    [Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black))],
+                    [Some(Piece::Rook(Colour::Black)),Some(Piece::Knight(Colour::Black)),Some(Piece::Bishop(Colour::Black)),Some(Piece::Queen(Colour::Black)),Some(Piece::King(Colour::Black)),Some(Piece::Bishop(Colour::Black)),Some(Piece::Knight(Colour::Black)),Some(Piece::Rook(Colour::Black))]],
             white_promotion: Piece::Queen(Colour::White),
             black_promotion: Piece::Queen(Colour::Black)
         }
@@ -1073,14 +1073,14 @@ mod tests {
         
         let mut game = Game::new();
 
-        game.board =    vec![vec![None,None,None,None,None,None,None,None],
-                        vec![None,None,Some(Piece::Rook(Colour::White)),None,None,None,None,None],
-                        vec![None,None,None,None,Some(Piece::King(Colour::White)),None,None,Some(Piece::Bishop(Colour::White))],
-                        vec![None,Some(Piece::Pawn(Colour::White)),None,Some(Piece::Pawn(Colour::White)),None,None,None,None],
-                        vec![None,None,Some(Piece::Queen(Colour::Black)),None,None,None,None,None],
-                        vec![None,Some(Piece::Knight(Colour::White)),Some(Piece::King(Colour::Black)),None,None,None,None,None],
-                        vec![None,None,None,Some(Piece::Pawn(Colour::Black)),Some(Piece::Queen(Colour::White)),None,None,None],
-                        vec![None,None,None,None,None,Some(Piece::Knight(Colour::Black)),None,None]];
+        game.board =    [[None,None,None,None,None,None,None,None],
+                        [None,None,Some(Piece::Rook(Colour::White)),None,None,None,None,None],
+                        [None,None,None,None,Some(Piece::King(Colour::White)),None,None,Some(Piece::Bishop(Colour::White))],
+                        [None,Some(Piece::Pawn(Colour::White)),None,Some(Piece::Pawn(Colour::White)),None,None,None,None],
+                        [None,None,Some(Piece::Queen(Colour::Black)),None,None,None,None,None],
+                        [None,Some(Piece::Knight(Colour::White)),Some(Piece::King(Colour::Black)),None,None,None,None,None],
+                        [None,None,None,Some(Piece::Pawn(Colour::Black)),Some(Piece::Queen(Colour::White)),None,None,None],
+                        [None,None,None,None,None,Some(Piece::Knight(Colour::Black)),None,None]];
         let mut moves = game.get_possible_moves("c2".to_string()).unwrap();
         moves.sort();
         assert_eq!(moves, vec!["a2".to_string(), "b2".to_string(), "c1".to_string(), "c3".to_string(), "c4".to_string(), "c5".to_string(), "d2".to_string(), "e2".to_string(), "f2".to_string(), "g2".to_string(), "h2".to_string()]);
@@ -1127,14 +1127,14 @@ mod tests {
         
         // resolving checks
 
-        game.board = vec![vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,Some(Piece::King(Colour::White)),None,None,None,None,None],
-        vec![None,None,None,Some(Piece::Bishop(Colour::White)),None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,Some(Piece::Knight(Colour::Black)),None,None,Some(Piece::King(Colour::Black)),None],
-        vec![None,None,None,None,None,None,None,None]];
+        game.board = [[None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,Some(Piece::King(Colour::White)),None,None,None,None,None],
+        [None,None,None,Some(Piece::Bishop(Colour::White)),None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,Some(Piece::Knight(Colour::Black)),None,None,Some(Piece::King(Colour::Black)),None],
+        [None,None,None,None,None,None,None,None]];
         game.state = GameState::Check;
         game.active = Colour::Black;
 
@@ -1146,14 +1146,14 @@ mod tests {
         moves.sort();
         assert_eq!(moves, vec!["f7".to_string(), "f8".to_string(), "g6".to_string(), "g8".to_string(), "h6".to_string(), "h7".to_string()]);
 
-        game.board = vec![vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,Some(Piece::Bishop(Colour::White)),None,None],
-        vec![None,None,Some(Piece::King(Colour::White)),None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,Some(Piece::King(Colour::Black)),None],
-        vec![None,None,Some(Piece::Rook(Colour::Black)),None,None,None,None,None]];
+        game.board = [[None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,Some(Piece::Bishop(Colour::White)),None,None],
+        [None,None,Some(Piece::King(Colour::White)),None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,Some(Piece::King(Colour::Black)),None],
+        [None,None,Some(Piece::Rook(Colour::Black)),None,None,None,None,None]];
         game.state = GameState::Check;
         game.active = Colour::White;
 
@@ -1200,14 +1200,14 @@ mod tests {
     fn promotion() {
         let mut game = Game::new();
 
-        game.board = vec![vec![None,None,None,None,None,None,None,Some(Piece::King(Colour::Black))],
-        vec![Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black))],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![None,None,None,None,None,None,None,None],
-        vec![Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White))],
-        vec![None,None,None,None,None,None,None,Some(Piece::King(Colour::White))]];
+        game.board = [[None,None,None,None,None,None,None,Some(Piece::King(Colour::Black))],
+        [Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black)),Some(Piece::Pawn(Colour::Black))],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [None,None,None,None,None,None,None,None],
+        [Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White)),Some(Piece::Pawn(Colour::White))],
+        [None,None,None,None,None,None,None,Some(Piece::King(Colour::White))]];
 
         game.make_move("a7".to_string(), "a8".to_string());
         assert_eq!(game.board[7][0], Some(Piece::Queen(Colour::White)));
