@@ -33,7 +33,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn unwrap(&self) -> Colour {
+    pub fn unwrap(&self) -> Colour {
         match self {
             Piece::King(x) => x.to_owned(),
             Piece::Queen(x) => x.to_owned(),
@@ -63,8 +63,8 @@ impl Piece {
 pub struct Game {
     /* save board, active colour, ... */
     state: GameState,
-    active: Colour,
-    board: Vec<Vec<Option<Piece>>>,
+    pub active: Colour,
+    pub board: Vec<Vec<Option<Piece>>>,
     white_promotion: Piece,
     black_promotion: Piece
 }
