@@ -990,6 +990,7 @@ impl Game {
     /// (optional) Don't forget to include en passent and castling.
     pub fn get_possible_moves(&self, _position: String) -> Option<Vec<String>> {
         let position = decode_position(&_position);
+        if self.state == GameState::GameOver { return None }
         match self.board[position[0]][position[1]] {
             Some(piece) => {
                 if piece.unwrap() != self.active {
