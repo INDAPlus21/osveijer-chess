@@ -33,7 +33,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    fn unwrap(&self) -> Colour {
+    pub fn unwrap(&self) -> Colour {
         match self {
             Piece::King(x) => x.to_owned(),
             Piece::Queen(x) => x.to_owned(),
